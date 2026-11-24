@@ -35,3 +35,24 @@ jobs:
           push: true
           tags: ghcr.io/rizwan786-pixel/node-docker-devops:latest
 
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo docker pull ghcr.io/rizwan786-pixel/node-docker-devops:latest
+            sudo docker rm -f node-service || true
+            sudo docker run -d \
+              --name node-service \
+              --restart unless-stopped \
+              --network aws-deployment_default \
+              --env-file /opt/node-service/.env \
+              ghcr.io/rizwan786-pixel/node-docker-devops:latest
+
